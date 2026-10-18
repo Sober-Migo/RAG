@@ -1,4 +1,4 @@
-"""RAG chain: retrieve + chat generation, with free extractive fallback."""
+"""RAG chain: retrieve + generate (Groq/HF), extractive fallback."""
 from pathlib import Path
 from typing import Union
 
@@ -6,13 +6,12 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
-from app.config import EXTRACTIVE_FALLBACK, HF_TOKEN
+from app.config import EXTRACTIVE_FALLBACK, GROQ_API_KEY, HF_TOKEN
 from app.documents import load_pdf, split_documents
 from app.llm import get_llm
 from app.vectorstore import get_retriever
 
 
-# Prompt body is sent as the user message; system message is set in llm.py
 QA_PROMPT = PromptTemplate.from_template(
     """Context:
 {context}
@@ -67,8 +66,9 @@ def answer_question(file_path: Union[str, Path], query: str) -> str:
         return "Please enter a question about the document."
 
     q = query.strip()
+    has_llm_key = bool(GROQ_API_KEY or HF_TOKEN)
 
-    if HF_TOKEN:
+    if has_llm_key:
         try:
             return build_generative_chain(file_path).invoke(q)
         except Exception as e:
