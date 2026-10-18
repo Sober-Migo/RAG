@@ -1,8 +1,7 @@
-"""Retrieval-QA chain (LCEL — stable on LangChain 0.2.x / Kaggle / Colab)."""
+"""Retrieval-QA chain (LCEL) — HF Inference API backends."""
 from pathlib import Path
 from typing import Optional, Union
 
-from langchain_core.language_models.llms import BaseLLM
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
@@ -29,14 +28,13 @@ def _format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-def build_qa_chain(file_path: Union[str, Path], llm: Optional[BaseLLM] = None):
-    """Load PDF → chunk → embed → retriever → LCEL QA chain."""
+def build_qa_chain(file_path: Union[str, Path], llm=None):
     documents = load_pdf(file_path)
     chunks = split_documents(documents)
     retriever = get_retriever(chunks)
     llm = llm or get_llm()
 
-    chain = (
+    return (
         {
             "context": retriever | _format_docs,
             "question": RunnablePassthrough(),
@@ -45,11 +43,9 @@ def build_qa_chain(file_path: Union[str, Path], llm: Optional[BaseLLM] = None):
         | llm
         | StrOutputParser()
     )
-    return chain
 
 
 def answer_question(file_path: Union[str, Path], query: str) -> str:
-    """End-to-end: PDF + question → grounded answer string."""
     if not file_path:
         return "Please upload a PDF first."
     if not query or not str(query).strip():

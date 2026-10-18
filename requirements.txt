@@ -1,16 +1,12 @@
-# Pinned for Kaggle/Colab Python 3.11
-# Do NOT force-reinstall torch on Kaggle — use the notebook preinstall.
-gradio>=4.44.0,<5
-langchain==0.2.16
+# HF Inference API only — no local torch / transformers / sentence-transformers
+gradio==4.44.0
+langchain==0.2.11
 langchain-core==0.2.43
-langchain-community==0.2.17
+langchain-community==0.2.10
 langchain-text-splitters==0.2.4
 langchain-huggingface==0.0.3
-chromadb>=0.4.24,<0.6
-pypdf>=4.3.1
-sentence-transformers>=3.0.0
-transformers>=4.43.0,<4.46
-huggingface_hub>=0.23.0
-python-dotenv>=1.0.0
-pydantic>=2.7.0,<2.10
-# torch: use environment default (Kaggle/Colab already provide it)
+chromadb==0.4.24
+pypdf==4.3.1
+pydantic==2.9.1
+huggingface_hub==0.23.0
+python-dotenv==1.0.1
