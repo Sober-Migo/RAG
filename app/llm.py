@@ -29,15 +29,22 @@ def get_llm() -> BaseLLM:
             timeout=120,
         )
 
-    # Local pipeline — works best with encoder-decoder models like flan-t5
+    # Local pipeline — encoder-decoder (flan-t5 family)
     tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL)
     model = AutoModelForSeq2SeqLM.from_pretrained(LLM_MODEL)
+    gen_kwargs = {
+        "max_new_tokens": MAX_NEW_TOKENS,
+    }
+    if TEMPERATURE and TEMPERATURE > 0:
+        gen_kwargs["temperature"] = TEMPERATURE
+        gen_kwargs["do_sample"] = True
+    else:
+        gen_kwargs["do_sample"] = False
+
     pipe = pipeline(
         "text2text-generation",
         model=model,
         tokenizer=tokenizer,
-        max_new_tokens=MAX_NEW_TOKENS,
-        temperature=TEMPERATURE if TEMPERATURE > 0 else None,
-        do_sample=TEMPERATURE > 0,
+        **gen_kwargs,
     )
     return HuggingFacePipeline(pipeline=pipe)

@@ -1,14 +1,15 @@
-# Core RAG stack (Hugging Face — no IBM Watsonx required)
+# Pinned for Kaggle/Colab Python 3.11 — avoids langchain_core.pydantic_v1 breakage
 gradio>=4.44.0,<5
-langchain>=0.2.11,<0.3
-langchain-community>=0.2.10,<0.3
-langchain-huggingface>=0.0.3
-langchain-text-splitters>=0.2.0
+langchain==0.2.16
+langchain-core==0.2.43
+langchain-community==0.2.17
+langchain-text-splitters==0.2.4
+langchain-huggingface==0.0.3
 chromadb>=0.4.24,<0.6
 pypdf>=4.3.1
 sentence-transformers>=3.0.0
-transformers>=4.43.0
+transformers>=4.43.0,<4.46
 torch>=2.0.0
 huggingface_hub>=0.23.0
 python-dotenv>=1.0.0
-pydantic>=2.7.0,<3
+pydantic>=2.7.0,<2.10
