@@ -1,13 +1,14 @@
-"""LLM backends: Groq (free tier) > Hugging Face chat > error."""
-from typing import Any, List, Optional
+"""LLM backends: Groq (optional) > HF OpenAI-compatible router > error."""
+from typing import Any, List, Mapping, Optional
 
-from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
 from pydantic import Field
 
 from app.config import (
     GROQ_API_KEY,
     GROQ_MODEL,
+    HF_ROUTER_BASE_URL,
     HF_TOKEN,
     LLM_MODEL,
     MAX_NEW_TOKENS,
@@ -23,8 +24,6 @@ SYSTEM_MSG = (
 
 
 class GroqLLM(LLM):
-    """Groq chat completions — free tier with API key."""
-
     api_key: str = Field(...)
     model: str = Field(default=GROQ_MODEL)
     max_new_tokens: int = Field(default=MAX_NEW_TOKENS)
@@ -52,26 +51,28 @@ class GroqLLM(LLM):
             ],
             max_tokens=self.max_new_tokens,
             temperature=self.temperature if self.temperature > 0 else 0.1,
+            stop=stop,
         )
-        text = resp.choices[0].message.content or ""
-        if stop:
-            for s in stop:
-                if s in text:
-                    text = text.split(s)[0]
-        return text.strip()
+        return (resp.choices[0].message.content or "").strip()
 
 
-class HFInferenceLLM(LLM):
-    """HF Inference Providers chat (often requires credits)."""
+class HuggingFaceRouterLLM(LLM):
+    """
+    OpenAI-compatible client against Hugging Face Inference Providers router.
 
-    model: str = Field(default=LLM_MODEL)
-    token: Optional[str] = Field(default=None)
-    max_new_tokens: int = Field(default=MAX_NEW_TOKENS)
+    base_url = https://router.huggingface.co/v1
+    (never api-inference.huggingface.co — that host is dead)
+    """
+
+    model_id: str = Field(default=LLM_MODEL)
+    token: str = Field(...)
+    base_url: str = Field(default=HF_ROUTER_BASE_URL)
+    max_tokens: int = Field(default=MAX_NEW_TOKENS)
     temperature: float = Field(default=TEMPERATURE)
 
     @property
     def _llm_type(self) -> str:
-        return "hf-chat"
+        return "huggingface_router"
 
     def _call(
         self,
@@ -80,51 +81,33 @@ class HFInferenceLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        if not self.token:
-            raise RuntimeError("HF_TOKEN is required for HF generative answers.")
+        from openai import OpenAI
 
-        from huggingface_hub import InferenceClient
+        client = OpenAI(base_url=self.base_url, api_key=self.token)
+        response = client.chat.completions.create(
+            model=self.model_id,
+            messages=[
+                {"role": "system", "content": SYSTEM_MSG},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            stop=stop,
+        )
+        return (response.choices[0].message.content or "").strip()
 
-        messages = [
-            {"role": "system", "content": SYSTEM_MSG},
-            {"role": "user", "content": prompt},
-        ]
-        last_err: Optional[Exception] = None
-        text: Optional[str] = None
-
-        for provider in (None, "hf-inference"):
-            try:
-                kw = {"token": self.token}
-                if provider:
-                    kw["provider"] = provider
-                client = InferenceClient(**kw)
-                resp = client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    max_tokens=self.max_new_tokens,
-                    temperature=self.temperature if self.temperature > 0 else 0.1,
-                )
-                text = resp.choices[0].message.content
-                if text:
-                    break
-            except Exception as e:
-                last_err = e
-
-        if not text:
-            raise RuntimeError(
-                f"HF chat failed for model={self.model!r}. "
-                f"Last error: {type(last_err).__name__}: {last_err}"
-            )
-
-        if stop:
-            for s in stop:
-                if s in text:
-                    text = text.split(s)[0]
-        return text.strip()
+    @property
+    def _identifying_params(self) -> Mapping[str, Any]:
+        return {
+            "model_id": self.model_id,
+            "base_url": self.base_url,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+        }
 
 
 def get_llm() -> LLM:
-    """Prefer Groq (free) → HF (optional) → raise."""
+    """Groq if key set, else HF router if token set."""
     if GROQ_API_KEY:
         return GroqLLM(
             api_key=GROQ_API_KEY,
@@ -133,13 +116,14 @@ def get_llm() -> LLM:
             temperature=TEMPERATURE,
         )
     if HF_TOKEN:
-        return HFInferenceLLM(
-            model=LLM_MODEL,
+        return HuggingFaceRouterLLM(
+            model_id=LLM_MODEL,
             token=HF_TOKEN,
-            max_new_tokens=MAX_NEW_TOKENS,
+            base_url=HF_ROUTER_BASE_URL,
+            max_tokens=MAX_NEW_TOKENS,
             temperature=TEMPERATURE,
         )
     raise RuntimeError(
-        "No LLM key set. Set GROQ_API_KEY (free) or HF_TOKEN, "
-        "or use extractive mode without a key."
+        "No LLM key set. Set GROQ_API_KEY and/or HF_TOKEN, "
+        "or run without keys for extractive mode."
     )

@@ -1,4 +1,4 @@
-"""RAG chain: retrieve + generate (Groq/HF), extractive fallback."""
+"""RAG chain: retrieve + generate, extractive fallback."""
 from pathlib import Path
 from typing import Union
 
@@ -13,12 +13,7 @@ from app.vectorstore import get_retriever
 
 
 QA_PROMPT = PromptTemplate.from_template(
-    """Context:
-{context}
-
-Question: {question}
-
-Answer using only the context above."""
+    """Context:\n{context}\n\nQuestion: {question}\n\nAnswer using only the context above."""
 )
 
 
@@ -66,9 +61,7 @@ def answer_question(file_path: Union[str, Path], query: str) -> str:
         return "Please enter a question about the document."
 
     q = query.strip()
-    has_llm_key = bool(GROQ_API_KEY or HF_TOKEN)
-
-    if has_llm_key:
+    if GROQ_API_KEY or HF_TOKEN:
         try:
             return build_generative_chain(file_path).invoke(q)
         except Exception as e:
@@ -79,5 +72,4 @@ def answer_question(file_path: Union[str, Path], query: str) -> str:
                 f"Falling back to free extractive retrieval:\n\n"
                 f"{_extractive_answer(file_path, q)}"
             )
-
     return _extractive_answer(file_path, q)
