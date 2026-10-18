@@ -6,10 +6,9 @@ load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
-# Small instruct model that often works on free HF serverless with a Read token
+# Instruct / conversational model (chat task). Override with LLM_MODEL env if needed.
 LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 
-# If generation fails, return retrieved passages (always free)
 EXTRACTIVE_FALLBACK = os.getenv("EXTRACTIVE_FALLBACK", "true").lower() in (
     "1",
     "true",

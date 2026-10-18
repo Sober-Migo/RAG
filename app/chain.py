@@ -1,4 +1,4 @@
-"""RAG chain: retrieve + generate, with free extractive fallback."""
+"""RAG chain: retrieve + chat generation, with free extractive fallback."""
 from pathlib import Path
 from typing import Union
 
@@ -12,16 +12,14 @@ from app.llm import get_llm
 from app.vectorstore import get_retriever
 
 
+# Prompt body is sent as the user message; system message is set in llm.py
 QA_PROMPT = PromptTemplate.from_template(
-    """Use only the context below to answer the question.
-If the answer is not in the context, say you do not know.
-
-Context:
+    """Context:
 {context}
 
 Question: {question}
 
-Answer:"""
+Answer using only the context above."""
 )
 
 

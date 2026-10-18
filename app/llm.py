@@ -1,4 +1,4 @@
-"""LLM via modern huggingface_hub.InferenceClient (router — not api-inference)."""
+"""LLM via huggingface_hub.InferenceClient — chat/conversational only."""
 from typing import Any, List, Optional
 
 from langchain_core.callbacks import CallbackManagerForLLMRun
@@ -10,12 +10,9 @@ from app.config import HF_TOKEN, LLM_MODEL, MAX_NEW_TOKENS, TEMPERATURE
 
 class HFInferenceLLM(LLM):
     """
-    Uses huggingface_hub>=0.28 InferenceClient.
-
-    Tries in order:
-      1) chat_completion (OpenAI-style / router)
-      2) text_generation
-    Never calls the deprecated api-inference.huggingface.co host directly.
+    Instruct models on HF Inference Providers often only support the
+    *conversational* task (chat.completions), not text-generation.
+    This wrapper uses chat only.
     """
 
     model: str = Field(default=LLM_MODEL)
@@ -25,7 +22,7 @@ class HFInferenceLLM(LLM):
 
     @property
     def _llm_type(self) -> str:
-        return "hf-inference-client"
+        return "hf-chat"
 
     def _call(
         self,
@@ -35,45 +32,66 @@ class HFInferenceLLM(LLM):
         **kwargs: Any,
     ) -> str:
         if not self.token:
-            raise RuntimeError(
-                "HF_TOKEN is required for generative answers. "
-                "Set HF_TOKEN or use extractive mode without a token."
-            )
+            raise RuntimeError("HF_TOKEN is required for generative answers.")
 
         from huggingface_hub import InferenceClient
 
-        client = InferenceClient(token=self.token)
-        text: Optional[str] = None
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You answer questions using only the provided context. "
+                    "If the answer is not in the context, say you do not know."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ]
+
         last_err: Optional[Exception] = None
+        text: Optional[str] = None
 
-        # 1) Chat completions (works with many instruct models on the router)
-        try:
-            resp = client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=self.max_new_tokens,
-                temperature=self.temperature if self.temperature > 0 else None,
-            )
-            text = resp.choices[0].message.content
-        except Exception as e:
-            last_err = e
+        # Try default routing, then explicit hf-inference provider
+        for provider in (None, "hf-inference"):
+            try:
+                client_kwargs = {"token": self.token}
+                if provider:
+                    client_kwargs["provider"] = provider
+                client = InferenceClient(**client_kwargs)
 
-        # 2) Classic text_generation
+                resp = client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=self.max_new_tokens,
+                    temperature=self.temperature if self.temperature > 0 else 0.1,
+                )
+                text = resp.choices[0].message.content
+                if text:
+                    break
+            except Exception as e:
+                last_err = e
+                continue
+
+        # Older method name on some hub versions
         if text is None:
             try:
-                text = client.text_generation(
-                    prompt,
+                client = InferenceClient(token=self.token)
+                resp = client.chat_completion(
+                    messages=messages,
                     model=self.model,
-                    max_new_tokens=self.max_new_tokens,
-                    temperature=self.temperature if self.temperature > 0 else None,
-                    do_sample=bool(self.temperature and self.temperature > 0),
+                    max_tokens=self.max_new_tokens,
+                    temperature=self.temperature if self.temperature > 0 else 0.1,
                 )
+                # response shape varies by version
+                if isinstance(resp, dict):
+                    text = resp.get("choices", [{}])[0].get("message", {}).get("content")
+                else:
+                    text = resp.choices[0].message.content
             except Exception as e:
                 last_err = e
 
-        if text is None:
+        if not text:
             raise RuntimeError(
-                f"HF Inference failed for model={self.model!r}. "
+                f"HF chat failed for model={self.model!r}. "
                 f"Last error: {type(last_err).__name__}: {last_err}"
             )
 
