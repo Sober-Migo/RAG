@@ -1,0 +1,14 @@
+# Core RAG stack (Hugging Face — no IBM Watsonx required)
+gradio>=4.44.0,<5
+langchain>=0.2.11,<0.3
+langchain-community>=0.2.10,<0.3
+langchain-huggingface>=0.0.3
+langchain-text-splitters>=0.2.0
+chromadb>=0.4.24,<0.6
+pypdf>=4.3.1
+sentence-transformers>=3.0.0
+transformers>=4.43.0
+torch>=2.0.0
+huggingface_hub>=0.23.0
+python-dotenv>=1.0.0
+pydantic>=2.7.0,<3

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv/
+venv/
+my_env/
+env/
+*.egg-info/
+dist/
+build/
+
+# Chroma / local vector store
+chroma_db/
+.chroma/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# HF cache (optional local)
+.cache/
