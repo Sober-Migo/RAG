@@ -1,4 +1,4 @@
-"""RAG chain: retrieve + generate, extractive fallback."""
+"""RAG chain: retrieve + Groq generate, extractive fallback."""
 from pathlib import Path
 from typing import Union
 
@@ -6,7 +6,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
-from app.config import EXTRACTIVE_FALLBACK, GROQ_API_KEY, HF_TOKEN
+from app.config import EXTRACTIVE_FALLBACK, GROQ_API_KEY
 from app.documents import load_pdf, split_documents
 from app.llm import get_llm
 from app.vectorstore import get_retriever
@@ -32,7 +32,7 @@ def _extractive_answer(file_path: Union[str, Path], query: str) -> str:
         f"[Passage {i + 1}]\n{d.page_content.strip()}" for i, d in enumerate(docs)
     ]
     return (
-        "(Extractive mode — free, no LLM call)\n\n"
+        "(Extractive mode — no LLM)\n\n"
         "Most relevant passages for your question:\n\n"
         + "\n\n---\n\n".join(parts)
     )
@@ -61,15 +61,17 @@ def answer_question(file_path: Union[str, Path], query: str) -> str:
         return "Please enter a question about the document."
 
     q = query.strip()
-    if GROQ_API_KEY or HF_TOKEN:
+
+    if GROQ_API_KEY:
         try:
             return build_generative_chain(file_path).invoke(q)
         except Exception as e:
             if not EXTRACTIVE_FALLBACK:
                 return f"Error while answering: {type(e).__name__}: {e}"
             return (
-                f"Generative LLM unavailable ({type(e).__name__}: {e}).\n"
-                f"Falling back to free extractive retrieval:\n\n"
+                f"Groq unavailable ({type(e).__name__}: {e}).\n"
+                f"Falling back to extractive retrieval:\n\n"
                 f"{_extractive_answer(file_path, q)}"
             )
+
     return _extractive_answer(file_path, q)
