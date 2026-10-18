@@ -1,4 +1,4 @@
-"""Local ONNX embeddings via Chroma — free, no HF Inference API, no torch."""
+"""Local ONNX embeddings via Chroma — free, no HF Inference host, no torch."""
 from typing import List
 
 from chromadb.utils import embedding_functions
@@ -6,7 +6,7 @@ from langchain_core.embeddings import Embeddings
 
 
 class ChromaDefaultEmbeddings(Embeddings):
-    """Wraps Chroma's DefaultEmbeddingFunction (all-MiniLM-L6-v2 ONNX)."""
+    """Chroma DefaultEmbeddingFunction = all-MiniLM-L6-v2 ONNX."""
 
     def __init__(self) -> None:
         self._ef = embedding_functions.DefaultEmbeddingFunction()

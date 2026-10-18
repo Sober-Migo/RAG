@@ -1,21 +1,25 @@
 # RAG — PDF Question Answering
 
-Upload a PDF → retrieve relevant passages → (optional) generate an answer.
+Upload a PDF, ask questions grounded in the document.
 
-## Important (2026)
+## Stack (2026)
 
-`api-inference.huggingface.co` **no longer exists** (DNS fails / 410 Gone).  
-This repo does **not** call that host.
+| Stage | Implementation |
+|--------|----------------|
+| Embeddings | Chroma ONNX `all-MiniLM-L6-v2` (local, free, no torch) |
+| Vector DB | Chroma |
+| LLM | `huggingface_hub.InferenceClient` + small instruct model |
+| UI | Gradio |
 
-| Component | How (free) |
-|-----------|------------|
-| **Embeddings** | Chroma default ONNX `all-MiniLM-L6-v2` — **fully free, local, no HF API** |
-| **Retrieval** | Chroma similarity — free |
-| **Generation** | Optional via `huggingface_hub.InferenceClient` (router). Free quota is limited; if it fails, app falls back to **extractive mode** (returns top passages) |
+**Do not use** `api-inference.huggingface.co` — that host is gone.  
+Requires **`huggingface_hub>=0.28`** so the client talks to the current router.
+
+Default model: `Qwen/Qwen2.5-1.5B-Instruct` (often works with a free Read token).  
+If generation fails, the app falls back to **extractive retrieval** (always free).
 
 ---
 
-## Kaggle (recommended)
+## Kaggle
 
 ```python
 import shutil, os
@@ -24,33 +28,33 @@ if os.path.exists("/kaggle/working/RAG"):
 !git clone https://github.com/Sober-Migo/RAG.git /kaggle/working/RAG
 %cd /kaggle/working/RAG
 
+!pip install -q -U "huggingface_hub>=0.28.0"
 !pip install -q gradio==4.44.0 langchain==0.2.11 langchain-core==0.2.43 \
   langchain-community==0.2.10 langchain-text-splitters==0.2.4 \
   chromadb==0.4.24 pypdf==4.3.1 pydantic==2.9.1 \
-  "huggingface_hub>=0.26.0" python-dotenv==1.0.1 onnxruntime tokenizers
+  python-dotenv==1.0.1 onnxruntime tokenizers
 
-# Restart session once after install, then:
+# Restart session once, then:
 import os, sys
 from getpass import getpass
-# Optional — only needed for generative answers
-os.environ["HF_TOKEN"] = getpass("HF token (Enter to skip → extractive only): ") or ""
+os.environ["HF_TOKEN"] = getpass("HF token: ")
 
 sys.path.insert(0, "/kaggle/working/RAG")
 from app.ui import create_app
 create_app().launch(share=True, server_name="0.0.0.0")
 ```
 
-Without a token (or if the router rejects free accounts), the app still works: it returns the **most relevant PDF passages** for your question.
+Optional model override:
+
+```python
+os.environ["LLM_MODEL"] = "Qwen/Qwen2.5-1.5B-Instruct"
+```
 
 ---
 
-## Architecture
+## Origin
 
-```text
-PDF → split → ONNX embeddings → Chroma → top-k chunks
-                 ↘ optional HF router LLM → answer
-                 ↘ else extractive passages (always free)
-```
+IBM Generative AI Engineering with LLMs (Coursera) RAG project, without Watsonx.
 
 ## License
 
