@@ -14,8 +14,8 @@ HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
 HF_ROUTER_BASE_URL = os.getenv(
     "HF_ROUTER_BASE_URL", "https://router.huggingface.co/v1"
 )
-# Model that worked for you on the free router path
-LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+# Must be an id from GET /v1/models for this account
+LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-Coder-3B-Instruct")
 
 EXTRACTIVE_FALLBACK = os.getenv("EXTRACTIVE_FALLBACK", "true").lower() in (
     "1",
