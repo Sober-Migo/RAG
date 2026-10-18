@@ -1,16 +1,22 @@
-"""Embeddings via Hugging Face Inference API (no local model)."""
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+"""Local ONNX embeddings via Chroma — free, no HF Inference API, no torch."""
+from typing import List
 
-from app.config import EMBEDDING_MODEL, HF_TOKEN
+from chromadb.utils import embedding_functions
+from langchain_core.embeddings import Embeddings
 
 
-def get_embeddings():
-    if not HF_TOKEN:
-        raise RuntimeError(
-            "HF_TOKEN is required. Set it in the environment or .env file. "
-            "Create a token at https://huggingface.co/settings/tokens"
-        )
-    return HuggingFaceInferenceAPIEmbeddings(
-        api_key=HF_TOKEN,
-        model_name=EMBEDDING_MODEL,
-    )
+class ChromaDefaultEmbeddings(Embeddings):
+    """Wraps Chroma's DefaultEmbeddingFunction (all-MiniLM-L6-v2 ONNX)."""
+
+    def __init__(self) -> None:
+        self._ef = embedding_functions.DefaultEmbeddingFunction()
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return self._ef(texts)
+
+    def embed_query(self, text: str) -> List[float]:
+        return self._ef([text])[0]
+
+
+def get_embeddings() -> Embeddings:
+    return ChromaDefaultEmbeddings()
