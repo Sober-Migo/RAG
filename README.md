@@ -1,80 +1,84 @@
-# RAG — PDF Question Answering
-
-Upload a PDF → retrieve relevant passages → answer with **Groq** (Markdown UI).
-
-## Demo
-
-![RAG demo](./rag%20demo.gif)
-
-![RAG UI](./rag%20picture.png)
-
-| Stage | Implementation |
-|--------|----------------|
-| Embeddings | Local ONNX `all-MiniLM-L6-v2` (Chroma, free) |
-| Vector DB | Chroma |
-| LLM | **Groq** (`llama-3.1-8b-instant` default) |
-| Fallback | Extractive top-k passages if no Groq key |
-| UI | Gradio (Markdown answers) |
-
-No Hugging Face Inference / router / Watsonx.
-
+---
+title: RAG PDF Q&A
+emoji: 📄
+colorFrom: yellow
+colorTo: purple
+sdk: gradio
+sdk_version: 4.44.0
+python_version: "3.11"
+app_file: main.py
+pinned: false
+license: mit
+short_description: Ask questions about any PDF — RAG with Chroma and Groq
 ---
 
-## Kaggle
+# RAG — PDF Question Answering Assistant
 
-1. Free key: https://console.groq.com/keys  
+Retrieval-Augmented Generation (RAG) app: upload a PDF, ask a question, and get an answer grounded only in that document.
 
-```python
-import shutil, os
-if os.path.exists("/kaggle/working/RAG"):
-    shutil.rmtree("/kaggle/working/RAG")
-!git clone https://github.com/Sober-Migo/RAG.git /kaggle/working/RAG
-%cd /kaggle/working/RAG
+![Demo](rag%20demo.gif)
 
-!pip install -q groq gradio==4.44.0 langchain==0.2.11 langchain-core==0.2.43 \
-  langchain-community==0.2.10 langchain-text-splitters==0.2.4 \
-  chromadb==0.4.24 pypdf==4.3.1 pydantic==2.9.1 \
-  python-dotenv==1.0.1 onnxruntime tokenizers
+## How it works
 
-# Restart session once after install, then:
-from getpass import getpass
-import os, sys
-os.environ["GROQ_API_KEY"] = getpass("Groq API key: ")
+1. **Load & chunk** — `PyPDFLoader` reads the PDF; a recursive splitter cuts it into 1000-character chunks (100 overlap).
+2. **Embed** — local all-MiniLM-L6-v2 (ONNX) via Chroma. No torch, no embedding API.
+3. **Retrieve** — in-memory Chroma store returns the top-4 most similar chunks.
+4. **Generate** — Groq (`llama-3.1-8b-instant` by default) answers using only the retrieved context, or says it doesn't know.
+5. **Fallback** — with no `GROQ_API_KEY` (or if Groq fails), the app shows the most relevant passages instead (extractive mode).
 
-sys.path.insert(0, "/kaggle/working/RAG")
-from app.ui import create_app
-create_app().launch(share=True, server_name="0.0.0.0")
+## Stack
+
+Python **3.11** · Gradio 4.44 · LangChain 0.2 · ChromaDB 0.4 · pypdf · Groq
+
+## Project structure
+
+```
+main.py              # entry point
+app/
+  config.py          # env-based settings
+  documents.py       # PDF loading + chunking
+  embeddings.py      # local ONNX embeddings
+  vectorstore.py     # Chroma store + retriever
+  llm.py             # Groq LLM wrapper
+  chain.py           # RAG chain + extractive fallback
+  ui.py              # Gradio interface
 ```
 
----
+## Run locally
 
-## Local
+Requires **Python 3.11**.
 
 ```bash
-git clone https://github.com/Sober-Migo/RAG.git && cd RAG
-python -m venv .venv && source .venv/bin/activate
+git clone https://github.com/Sober-Migo/RAG.git
+cd RAG
+python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # set GROQ_API_KEY=
-python main.py
+cp .env.example .env      # add your GROQ_API_KEY
+python main.py            # opens on http://localhost:7860
 ```
 
----
+Get a free Groq key at <https://console.groq.com/keys>.
 
-## Architecture
+## Configuration
 
-```text
-PDF → chunk → ONNX embeddings → Chroma → top-k context
-                                      ↓
-                              Groq chat LLM
-                                      ↓
-                           Gradio Markdown answer
-```
+| Variable | Default | Description |
+|---|---|---|
+| `GROQ_API_KEY` | — | Required for generated answers |
+| `GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model name |
+| `CHUNK_SIZE` | `1000` | Chunk size in characters |
+| `CHUNK_OVERLAP` | `100` | Overlap between chunks |
+| `TEMPERATURE` | `0.3` | Sampling temperature |
+| `MAX_NEW_TOKENS` | `256` | Max answer length |
+| `EXTRACTIVE_FALLBACK` | `true` | Show passages if Groq is unavailable |
+| `SERVER_NAME` / `SERVER_PORT` | `0.0.0.0` / `7860` | Gradio server settings |
 
----
+## Deploy on Hugging Face Spaces
 
-## Origin
+The YAML header at the top of this file configures the Space (Gradio SDK, Python 3.11, entry point `main.py`).
 
-IBM Generative AI Engineering with LLMs (Coursera) RAG project, reimplemented with Groq + local embeddings.
+1. Push this repo to a Space with SDK **Gradio**.
+2. In **Settings → Variables and secrets**, add a secret named `GROQ_API_KEY`.
+3. The Space builds and starts automatically.
 
 ## License
 
