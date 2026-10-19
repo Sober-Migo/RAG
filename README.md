@@ -1,6 +1,12 @@
 # RAG — PDF Question Answering
 
-Upload a PDF → retrieve relevant passages → answer with **Groq**.
+Upload a PDF → retrieve relevant passages → answer with **Groq** (Markdown UI).
+
+## Demo
+
+![RAG demo](./rag%20demo.gif)
+
+![RAG UI](./rag%20picture.png)
 
 | Stage | Implementation |
 |--------|----------------|
@@ -8,7 +14,7 @@ Upload a PDF → retrieve relevant passages → answer with **Groq**.
 | Vector DB | Chroma |
 | LLM | **Groq** (`llama-3.1-8b-instant` default) |
 | Fallback | Extractive top-k passages if no Groq key |
-| UI | Gradio |
+| UI | Gradio (Markdown answers) |
 
 No Hugging Face Inference / router / Watsonx.
 
@@ -50,6 +56,18 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # set GROQ_API_KEY=
 python main.py
+```
+
+---
+
+## Architecture
+
+```text
+PDF → chunk → ONNX embeddings → Chroma → top-k context
+                                      ↓
+                              Groq chat LLM
+                                      ↓
+                           Gradio Markdown answer
 ```
 
 ---
