@@ -11,7 +11,9 @@ from app.config import GROQ_API_KEY, GROQ_MODEL, MAX_NEW_TOKENS, TEMPERATURE
 SYSTEM_MSG = (
     "You answer questions using only the provided context. "
     "If the answer is not in the context, say you do not know. "
-    "Be concise and factual."
+    "Be concise and factual. "
+    "Format the answer in clean Markdown "
+    "(headings, bullet lists, and bold where helpful)."
 )
 
 

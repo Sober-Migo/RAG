@@ -11,7 +11,8 @@ def create_app() -> gr.Blocks:
             """
             # RAG PDF Q&A
             Upload a PDF and ask questions grounded in the document.
-            **Stack:** Hugging Face embeddings + LLM · Chroma · LangChain · Gradio
+
+            **Stack:** Local ONNX embeddings · Chroma · LangChain · **Groq** · Gradio
             """
         )
         with gr.Row():
@@ -27,7 +28,12 @@ def create_app() -> gr.Blocks:
             placeholder="Ask anything about the uploaded document…",
         )
         submit_btn = gr.Button("Ask", variant="primary")
-        answer_output = gr.Textbox(label="Answer", lines=8)
+
+        gr.Markdown("### Answer")
+        answer_output = gr.Markdown(
+            value="*Answer will appear here.*",
+            elem_classes=["rag-answer"],
+        )
 
         submit_btn.click(
             fn=answer_question,
