@@ -4,7 +4,7 @@ emoji: 📄
 colorFrom: yellow
 colorTo: purple
 sdk: gradio
-sdk_version: 4.44.0
+sdk_version: "4.44.0"
 python_version: "3.11"
 app_file: main.py
 pinned: false
@@ -16,24 +16,26 @@ short_description: Ask questions about any PDF — RAG with Chroma and Groq
 
 Retrieval-Augmented Generation (RAG) app: upload a PDF, ask a question, and get an answer grounded only in that document.
 
+**Live Space:** [huggingface.co/spaces/Sober-Migo/RAG](https://huggingface.co/spaces/Sober-Migo/RAG)
+
 ![Demo](rag%20demo.gif)
 
 ## How it works
 
 1. **Load & chunk** — `PyPDFLoader` reads the PDF; a recursive splitter cuts it into 1000-character chunks (100 overlap).
 2. **Embed** — local all-MiniLM-L6-v2 (ONNX) via Chroma. No torch, no embedding API.
-3. **Retrieve** — in-memory Chroma store returns the top-4 most similar chunks.
-4. **Generate** — Groq (`llama-3.1-8b-instant` by default) answers using only the retrieved context, or says it doesn't know.
-5. **Fallback** — with no `GROQ_API_KEY` (or if Groq fails), the app shows the most relevant passages instead (extractive mode).
+3. **Retrieve** — in-memory Chroma store returns the top-k most similar chunks.
+4. **Generate** — Groq (`llama-3.1-8b-instant` by default) answers using only the retrieved context.
+5. **Fallback** — with no `GROQ_API_KEY` (or if Groq fails), the app shows the most relevant passages (extractive mode).
 
 ## Stack
 
-Python **3.11** · Gradio 4.44 · LangChain 0.2 · ChromaDB 0.4 · pypdf · Groq
+Python **3.11** · Gradio 4.44 · LangChain 0.2 · ChromaDB 0.4 · pypdf · Groq · ONNX Runtime
 
 ## Project structure
 
 ```
-main.py              # entry point
+main.py              # HF Spaces + local entry (exports `demo`)
 app/
   config.py          # env-based settings
   documents.py       # PDF loading + chunking
@@ -46,18 +48,25 @@ app/
 
 ## Run locally
 
-Requires **Python 3.11**.
-
 ```bash
 git clone https://github.com/Sober-Migo/RAG.git
 cd RAG
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env      # add your GROQ_API_KEY
-python main.py            # opens on http://localhost:7860
+cp .env.example .env      # add GROQ_API_KEY=
+python main.py            # http://localhost:7860
 ```
 
-Get a free Groq key at <https://console.groq.com/keys>.
+Free Groq key: <https://console.groq.com/keys>
+
+## Hugging Face Space checklist
+
+1. Space URL: <https://huggingface.co/spaces/Sober-Migo/RAG>
+2. **Settings → Variables and secrets** → add secret **`GROQ_API_KEY`** (required for generated answers).
+3. **Settings → Factory rebuild** (or unpause / restart) after setting the secret.
+4. Wait for the build log to finish; open the Space and upload a short PDF.
+
+GitHub Actions workflow `.github/workflows/sync_to_hf.yml` can mirror `main` → the Space when `HF_TOKEN` is set as a GitHub secret.
 
 ## Configuration
 
@@ -70,15 +79,6 @@ Get a free Groq key at <https://console.groq.com/keys>.
 | `TEMPERATURE` | `0.3` | Sampling temperature |
 | `MAX_NEW_TOKENS` | `256` | Max answer length |
 | `EXTRACTIVE_FALLBACK` | `true` | Show passages if Groq is unavailable |
-| `SERVER_NAME` / `SERVER_PORT` | `0.0.0.0` / `7860` | Gradio server settings |
-
-## Deploy on Hugging Face Spaces
-
-The YAML header at the top of this file configures the Space (Gradio SDK, Python 3.11, entry point `main.py`).
-
-1. Push this repo to a Space with SDK **Gradio**.
-2. In **Settings → Variables and secrets**, add a secret named `GROQ_API_KEY`.
-3. The Space builds and starts automatically.
 
 ## License
 

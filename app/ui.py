@@ -13,6 +13,9 @@ def create_app() -> gr.Blocks:
             Upload a PDF and ask questions grounded in the document.
 
             **Stack:** Local ONNX embeddings · Chroma · LangChain · **Groq** · Gradio
+
+            *Tip:* Set `GROQ_API_KEY` in Space secrets for generated answers.
+            Without it, the app returns the most relevant passages (extractive mode).
             """
         )
         with gr.Row():
@@ -50,4 +53,5 @@ def create_app() -> gr.Blocks:
 
 def launch(share: bool = False) -> None:
     app = create_app()
+    app.queue(default_concurrency_limit=2)
     app.launch(server_name=SERVER_NAME, server_port=SERVER_PORT, share=share)
